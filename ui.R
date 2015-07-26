@@ -24,9 +24,15 @@ shinyUI(fluidPage(
         value = FALSE),
       
       checkboxInput("adjust", 
-        "Adjust prices for inflation", value = FALSE)
+        "Adjust prices for inflation", value = FALSE),
+      
+      sliderInput("bins",
+                  "Number of bins:",
+                  min = 20,
+                  max = 100,
+                  value = 60)
     ),
     
-    mainPanel(plotOutput("plot"))
+    mainPanel(plotOutput("plot"),plotOutput("distPlot"))
   )
 ))

@@ -1,93 +1,46 @@
-#################################################################
-## server
-#################################################################
-library(shiny)
-library(scales) # for transparency in density-plot fill
+# server.R
 
-############################################################
-## Set up the gamma-distributed population
-###########################################################
-shapeGamma <- 2
-scaleGamma <- 50
-xSkew <- seq(0,shapeGamma*scaleGamma+7.5*sqrt(shapeGamma)*scaleGamma,
-             length.out=600)
-ySkew <- dgamma(xSkew,shape=shapeGamma,scale=scaleGamma)
-popDen <- list(x=xSkew,y=ySkew)
-popMean <- shapeGamma*scaleGamma
-yMax <- 1.5*max(popDen$y)
+library(quantmod)
+source("helpers.R")
 
-# shinyServer <- function(input, output) {
+shinyServer(function(input, output){
+
+        datainput <-  reactive({
+                data <- getSymbols(input$symb, src = "yahoo", 
+                                   from = input$dates[1],
+                                   to = input$dates[2],
+                                   auto.assign = FALSE)
+        })
         
-        ## set see so that users arelikely to get different results
-        set.seed(as.numeric(Sys.time()))
-        
-        ## add object to track the state of the app:
-        rv <- reactiveValues(sample = NULL, 
-                             mean = NULL, 
-                             lower = NULL,
-                             upper = NULL,
-                             sims = 10,
-                             good = 1)
-        
-#         observeEvent(input$takeSample, 
-#                      {
-#                              # random sample and its mean
-#                              samp <- rgamma(input$n,shape=shapeGamma,scale=scaleGamma)
-#                              xbar <-  mean(samp)
-#                              # make bounds for the confidence interval
-#                              conf  <- isolate(input$confLevel/100)
-#                              t.input <- conf + ((1 - conf)/2)
-#                              tMultiplier <- qt(t.input, df = input$n - 1)
-#                              se <-  sd(samp)/sqrt(input$n)
-#                              margin <- tMultiplier * se
-#                              lower <- xbar - margin
-#                              upper <- xbar + margin
-#                              # does the interval contain the parameter?
-#                              goodInterval <- popMean >= lower & popMean <= upper
-#                              # store in rv
-#                              rv$sample <- rgamma(input$n,shape = shapeGamma,scale = scaleGamma)
-#                              rv$mean <- xbar
-#                              rv$lower <- lower
-#                              rv$upper <- upper
-#                              rv$sims <- rv$sims + 1
-#                              rv$good <- rv$good + goodInterval
-#                      })
+        datainput2 <- reactive({
+                if (!input$adjust) return(datainput())
+                    adjust(datainput())
+                
+        })
         
         
-        output$plotSample <- renderPlot({
-                # the underlying population
-                plot(popDen$x,popDen$y,type="l",lwd=3,col="red",
-                     main="Density Curve of Population",
-                     xlab="",
-                     ylab="density",
-                     ylim = c(0,yMax))
-                abline(v=popMean,lwd=2)
-                # sample and interval
-                if (input$takeSample) {
-                        # density plot for the sample
-                        sampDen <- density(rv$sample, from = 0)
-                        xdens <- sampDen$x
-                        ydens <- sampDen$y
-                        firstx <- xdens[1]
-                        lastx <- xdens[length(xdens)]
-                        polygon(x = c(firstx,xdens,lastx), y = c(0,ydens,0), col = alpha("lightblue",0.5))
-                        # now the interval
-                        intLevel <- 0.95*yMax
-                        segments(x0 = rv$lower, y0 = intLevel, x1 = rv$upper, y1 = intLevel, 
-                                 col = "green", lwd = 3)
-                        text(x=rv$lower,y=intLevel,labels="(")
-                        text(x=rv$upper,y=intLevel,labels=")")
-                        points(rv$mean, intLevel, col = "blue", pch = 20,cex=2)
-                        rug(rv$sample)
-                }
-        })  # end plotSample
         
-        # summary of intervals so far
-        output$summary <- renderTable({
-                df <- data.frame(rv$sims,
-                                 rv$good,
-                                 ifelse(rv$sims >0, round(rv$good/rv$sims*100,3), NA))
-                names(df) <- c("Simulations", "Good Intervals", "Percentage Good")
-                df
-        }, include.rownames = FALSE)
-} # end server
+  output$plot <- renderPlot({
+           chartSeries(datainput2(), theme = chartTheme("white"), 
+      type = "line", log.scale = input$log,abline(mean(datainput2()),0),TA = NULL)
+        lx= lag(datainput2())
+        mx= mean(datainput2())
+        vx= var(datainput2())
+         sdx = sqrt(vx)
+    
+  })
+  
+  output$distPlot <- renderPlot({
+          #x    <- (datainput2()-mean(datainput2()))/stderr(datainput2())  
+          #bins <- seq(min(x), max(x), length.out = input$bins + 1)
+          
+          # draw the histogram with the specified number of bins
+          
+          #hist(x, breaks = bins, col = 'darkgray', border = 'white')
+          barChart(datainput2(),theme='white.mono',bar.type='hlc') 
+        })  
+            
+  
+  
+})
+

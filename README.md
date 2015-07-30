@@ -9,4 +9,12 @@ of the price returns but I have only finished the input not the output stage.
 
 That's all for now how you enjoy!
 
+
+Note:  The instance  https://dxanderdev.shinyapps.io/DataProduct1 was not working due to a corrupted file
+        Here is a link to the working instance https://dxanderdev.shinyapps.io/stockVis
+
+
+
+
+
 Dxander
